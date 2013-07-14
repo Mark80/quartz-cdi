@@ -42,7 +42,6 @@ public class QuartzCdiExtension implements Extension {
         final JobDetailCreator jobDetailCreator=new JobDetailCreator();
         final Scheduler quartzScheduler=StdSchedulerFactory.getDefaultScheduler();
         final ScheduledJob schedulazione = new ScheduledJob(quartzScheduler, triggerCreator, jobDetailCreator);
-        EntityManager entityManager = BeanUtils.getInstanceByType(beanManager, EntityManager.class);
-        schedulazione.startScheduling(context,entityManager);
+        schedulazione.startScheduling(context);
     }
 }

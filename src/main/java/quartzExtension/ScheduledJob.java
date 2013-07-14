@@ -31,78 +31,67 @@ import fire.BaseScheduler;
 @ApplicationScoped
 public class ScheduledJob {
 
-    private final List<TriggerSupport> scheduledNow = new ArrayList<TriggerSupport>();
-    private final List<TriggerSupport> scheduledSpot = new ArrayList<TriggerSupport>();
-    private final Scheduler scheduler;
-    private final TriggerCreator triggerCreator;
-    private final JobDetailCreator jobDetailCreator;
+	private final List<TriggerSupport> scheduledNow = new ArrayList<TriggerSupport>();
+	private final List<TriggerSupport> scheduledSpot = new ArrayList<TriggerSupport>();
+	private final Scheduler scheduler;
+	private final TriggerCreator triggerCreator;
+	private final JobDetailCreator jobDetailCreator;
 
-    public ScheduledJob(Scheduler sheduler,TriggerCreator triggerCreator,JobDetailCreator jobDetailCreator) throws SchedulerException {
-        super();
-        this.scheduler = sheduler;
-        this.triggerCreator=triggerCreator;
-        this.jobDetailCreator=jobDetailCreator;
-    }
+	public ScheduledJob(Scheduler sheduler, TriggerCreator triggerCreator,
+			JobDetailCreator jobDetailCreator) throws SchedulerException {
+		super();
+		this.scheduler = sheduler;
+		this.triggerCreator = triggerCreator;
+		this.jobDetailCreator = jobDetailCreator;
+	}
 
-    public void startScheduling(QuartzContext context, EntityManager em) throws SchedulerException {
-        scheduler.start();
-        final List<String> nomi = getJobNameStoredOnDB(em);
-        for (TriggerSupport triggerSupport : context.getContext()) {
-            if (isSchedulableNow(triggerSupport, nomi)) {
-                scheduledNow.add(triggerSupport);
-                schedulaJob(triggerSupport);
-            } else {
-                scheduledSpot.add(triggerSupport);
-            }
-        }
-    }
+	public void startScheduling(QuartzContext context)
+			throws SchedulerException {
+		scheduler.start();
+		for (TriggerSupport triggerSupport : context.getContext()) {
+			schedulaJob(triggerSupport);
+		}
+	}
 
-    private void schedulaJob(TriggerSupport triggerSupport) throws SchedulerException {      
-        final JobDetail job = jobDetailCreator.createJobDetailFromTriggerSupport(triggerSupport);
-        final Trigger trigger = triggerCreator.createQuartzTrigger(job,triggerSupport);
-        scheduler.scheduleJob(job, trigger);
-    }
+	private void schedulaJob(TriggerSupport triggerSupport)
+			throws SchedulerException {
+		final JobDetail job = jobDetailCreator
+				.createJobDetailFromTriggerSupport(triggerSupport);
+		final Trigger trigger = triggerCreator.createQuartzTrigger(job,
+				triggerSupport);
+		scheduler.scheduleJob(job, trigger);
+	}
 
-    private boolean isSchedulableNow(TriggerSupport triggerSupport, Collection<String> nomi) {
-        TriggerHandler annotation = triggerSupport.getAnnotation();
-        return annotation.attivo() && !nomi.contains(triggerSupport.jobName());
-    }
+	public void fireJobSpot() throws SchedulerException {
+		TriggerSupport trigger = getSchedulerSpot();
+		JobExecutable esecuzioneSpot = trigger.getJobInstance();
+		esecuzioneSpot.execute(null);
+	}
 
-    @SuppressWarnings("unchecked")
-    private List<String> getJobNameStoredOnDB(EntityManager em) {
-        Query query = em.createNativeQuery("select job_name from qrtz_job_details");
-        final List<String> nameOfJobsOnDB = (List<String>) query.getResultList();
-        return nameOfJobsOnDB;
-    }
+	private TriggerSupport getSchedulerSpot() {
+		final String nameofJobSpot = FacesContext.getCurrentInstance()
+				.getExternalContext().getRequestParameterMap().get("name");
+		TriggerSupport result = getTriggerSupportFromSchedulerSpot(nameofJobSpot);
+		return result;
+	}
 
-    public void fireJobSpot() throws SchedulerException {
-        TriggerSupport trigger = getSchedulerSpot();
-        JobExecutable esecuzioneSpot = trigger.getJobInstance();
-        esecuzioneSpot.execute(null);
-    }
+	private TriggerSupport getTriggerSupportFromSchedulerSpot(
+			String nameofJobSpot) {
+		TriggerSupport result = null;
+		for (TriggerSupport triggerSupport : scheduledSpot) {
+			if (triggerSupport.jobName().equals(nameofJobSpot)) {
+				result = triggerSupport;
+			}
+		}
+		return result;
+	}
 
-    private TriggerSupport getSchedulerSpot() {
-        final String nameofJobSpot = FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get("name");
-        TriggerSupport result= getTriggerSupportFromSchedulerSpot(nameofJobSpot);
-        return result;
-    }
+	public List<TriggerSupport> getScheduledNow() {
+		return scheduledNow;
+	}
 
-    private TriggerSupport getTriggerSupportFromSchedulerSpot(String nameofJobSpot) {
-        TriggerSupport result = null;
-        for (TriggerSupport triggerSupport : scheduledSpot) {
-            if (triggerSupport.jobName().equals(nameofJobSpot)) {
-                result = triggerSupport;
-            }
-        }
-        return result;
-    }
-
-    public List<TriggerSupport> getScheduledNow() {
-        return scheduledNow;
-    }
-
-    public List<TriggerSupport> getScheduledSpot() {
-        return scheduledSpot;
-    }
+	public List<TriggerSupport> getScheduledSpot() {
+		return scheduledSpot;
+	}
 
 }
